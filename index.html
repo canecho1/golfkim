@@ -438,8 +438,13 @@
   .cat-card:hover { border-color:var(--fairway-light); transform:translateY(-3px); box-shadow:0 14px 30px -16px rgba(76,175,114,0.5); }
   .cat-card .cat-emoji { font-size:30px; display:block; margin-bottom:12px; }
   .cat-card .cat-name { font-size:16.5px; font-weight:800; letter-spacing:-0.3px; margin-bottom:5px; }
-  .cat-card .cat-desc { font-size:12px; color:var(--text-dim); line-height:1.5; }
+  .cat-card .cat-desc { font-size:12px; color:#c5d6cb; line-height:1.55; }
   .cat-card .cat-badge { position:absolute; top:13px; right:13px; font-size:9.5px; font-weight:800; padding:3px 8px; border-radius:20px; background:rgba(201,168,87,0.2); color:var(--gold); }
+  /* 카테고리 화면: 카드가 세로 공간을 적절히 채우도록 */
+  .cat-screen { display:flex; flex-direction:column; }
+  .cat-screen .cat-grid { flex:1 1 auto; align-content:stretch; }
+  .cat-screen .cat-card { display:flex; flex-direction:column; }
+  .cat-screen .cat-card .cat-desc { margin-top:auto; }
 
   /* 간단 문의 폼 */
   .inquiry-field { margin-bottom:16px; }
@@ -543,6 +548,81 @@
   .intro-sub-btn.join { color:var(--gold); border-color:rgba(201,168,87,0.45); }
   .intro-sub-btn.join:hover { background:rgba(201,168,87,0.18); }
   #intro.hide { opacity:0; pointer-events:none; transition: opacity 0.5s; }
+
+  /* ===== 모바일 가독성: 폰 화면에서 글자 키우기 ===== */
+  @media (max-width: 600px) {
+    body { font-size: 16px; }
+    /* 상단바: 브랜드(위) + 탭(아래) 2단으로 배치 → 끊김 방지 */
+    .topbar { flex-direction: column; align-items: stretch; gap: 12px; padding-left: 16px; padding-right: 16px; }
+    .brand { gap: 10px; }
+    .brand-mark { width: 36px; height: 36px; font-size: 19px; flex-shrink: 0; }
+    .brand-name { font-size: 17px; letter-spacing: -0.4px; white-space: nowrap; }
+    .brand-name small { font-size: 11px; white-space: nowrap; }
+    /* 탭: 가로로 균등 분배, 한 줄 유지 */
+    .tabs { width: 100%; gap: 4px; padding: 4px; }
+    .tab { flex: 1; font-size: 13px; padding: 9px 4px; font-weight: 700; white-space: nowrap; text-align: center; }
+    .tab-badge { font-size: 9.5px; padding: 1px 5px; }
+
+    /* 신청 단계 화면 */
+    .step-tag { font-size: 13.5px; }
+    .step-title { font-size: 25px; }
+    .step-sub { font-size: 16px; }
+    .opt .o-main { font-size: 17px; }
+    .opt .o-desc { font-size: 13.5px; }
+    .field label { font-size: 14.5px; }
+    .field input, .field select, .field textarea { font-size: 16.5px; }
+    .inquiry-field label { font-size: 14.5px; }
+    .inquiry-field textarea { font-size: 16.5px; }
+    .btn { font-size: 16px; }
+    .note { font-size: 13.5px; }
+    .quota-note { font-size: 13.5px; }
+
+    /* 카테고리 카드 */
+    .cat-card .cat-name { font-size: 18px; }
+    .cat-card .cat-desc { font-size: 13.5px; color: #cfe0d5; }
+    .cat-card .cat-emoji { font-size: 33px; }
+
+    /* 달력 */
+    .cal-day { font-size: 15.5px; }
+    .cal-dow { font-size: 13px; }
+    .cal-month { font-size: 16px; }
+
+    /* 요약/완료 카드 */
+    .sum-row .k { font-size: 14px; }
+    .sum-row .v { font-size: 14.5px; }
+    .summary-card { font-size: 14.5px; }
+
+    /* 운영자·비서 카드 */
+    .panel h3 { font-size: 16.5px; }
+    .req-name { font-size: 16.5px; }
+    .req-phone { font-size: 13px; }
+    .chip { font-size: 13px; }
+    .mini-btn { font-size: 13px; padding: 8px 13px; }
+    select.assign-select { font-size: 13px; }
+    .status { font-size: 12.5px; }
+    .saved-note, .booked-info { font-size: 13px; }
+    .sec-name { font-size: 15.5px; }
+    .sec-meta { font-size: 12.5px; }
+    .stat .num { font-size: 22px; }
+    .stat .lab { font-size: 12px; }
+    .search-wrap input { font-size: 16px; }
+
+    /* 인트로 */
+    .intro-cta { font-size: 16.5px; }
+    .intro-sub-btn { font-size: 14px; }
+    /* 카테고리 화면: 화면 세로를 채워 아래 여백 줄이기 */
+    #view-user.is-category { min-height: calc(100vh - 150px); display:flex; flex-direction:column; }
+    #view-user.is-category #step-host { flex:1 1 auto; display:flex; flex-direction:column; }
+    .cat-screen { min-height: 100%; }
+    .cat-screen .cat-grid { margin-top:14px; }
+    .cat-screen .cat-card { padding:20px 18px; min-height:150px; }
+    .cat-screen .cat-card .cat-emoji { font-size:34px; margin-bottom:14px; }
+  }
+  @media (max-width: 360px) {
+    .step-title { font-size: 22px; }
+    .topbar { padding-left: 12px; padding-right: 12px; }
+    .tab { font-size: 12px; padding: 9px 2px; }
+  }
 </style>
 </head>
 <body>
@@ -958,22 +1038,27 @@ function renderStep(){
   renderProgress();
   const host = document.getElementById('step-host');
   const cur = activeSteps()[step];
+  // 카테고리 화면일 때만 세로 채움 레이아웃 클래스 부여
+  const vu = document.getElementById('view-user');
+  if(vu) vu.classList.toggle('is-category', cur==='category');
 
   if(cur==='category'){
     host.innerHTML = `
-      <div class="step-tag">서비스 선택</div>
-      <div class="step-title">어떤 도움이 필요하세요?</div>
-      <div class="step-sub">원하시는 서비스를 골라주세요. 김비서가 직접 챙겨드립니다.</div>
-      <div class="cat-grid">
-        ${Object.keys(CATEGORIES).map(k=>{
-          const c = CATEGORIES[k];
-          return `<button class="cat-card" onclick="pickCategory('${k}')">
-            ${c.badge?`<span class="cat-badge">${c.badge}</span>`:''}
-            <span class="cat-emoji">${c.emoji}</span>
-            <span class="cat-name">${c.name}</span>
-            <span class="cat-desc">${c.desc}</span>
-          </button>`;
-        }).join('')}
+      <div class="cat-screen">
+        <div class="step-tag">서비스 선택</div>
+        <div class="step-title">어떤 도움이 필요하세요?</div>
+        <div class="step-sub">원하시는 서비스를 골라주세요. 김비서가 직접 챙겨드립니다.</div>
+        <div class="cat-grid">
+          ${Object.keys(CATEGORIES).map(k=>{
+            const c = CATEGORIES[k];
+            return `<button class="cat-card" onclick="pickCategory('${k}')">
+              ${c.badge?`<span class="cat-badge">${c.badge}</span>`:''}
+              <span class="cat-emoji">${c.emoji}</span>
+              <span class="cat-name">${c.name}</span>
+              <span class="cat-desc">${c.desc}</span>
+            </button>`;
+          }).join('')}
+        </div>
       </div>`;
     return;
   }
@@ -1550,6 +1635,26 @@ function payAndSubmit(){
 }
 function next(){ const s=activeSteps(); if(step<s.length-1){ step++; renderStep(); } }
 function prev(){ if(step>0){ step--; renderStep(); } }
+// 스와이프(오른쪽으로 밀기) 시 현재 화면에 맞는 뒤로가기
+function swipeBack(){
+  // 손님(예약 신청) 화면에서만 동작
+  const vu = document.getElementById('view-user');
+  if(!vu || vu.style.display==='none') return false;
+  const cur = activeSteps()[step];
+  // 가입 전용 모드: 연락처 입력 → 이전(가입 취소)
+  if(state.freeJoin || state.joinMode){
+    if(cur==='contact'){ exitJoinMode(); return true; }
+  }
+  // 카테고리 선택 화면이면 더 뒤로 갈 곳 없음
+  if(cur==='category') return false;
+  // 완료 화면이면 동작 안 함(처음으로 버튼 사용 유도)
+  if(cur==='done') return false;
+  // 골프부킹 날짜 단계 / 상담 문의 단계 → 카테고리로
+  if(cur==='date' || cur==='inquiry'){ goCategory(); return true; }
+  // 그 외 단계 → 한 단계 이전
+  if(step>0){ prev(); return true; }
+  return false;
+}
 function resetFlow(){ state={category:null,inquiry:'',dealType:null,memRegion:null,startDate:null,endDate:null,people:null,date:null,region:null,time:null,origin:null,priority:null,name:'',phone:'',plan:null,joinMode:false,freeJoin:false}; step=0; renderStep(); }
 
 let lastAssigned = '미배정';
@@ -2306,6 +2411,35 @@ function goPayFromJoin(){
 }
 renderStep();
 
+// ===== 스와이프(오른쪽으로 밀기) → 이전 화면 =====
+(function(){
+  let startX=0, startY=0, startT=0, tracking=false;
+  const EDGE_GUARD = 0;     // 화면 어디서 시작해도 허용
+  document.addEventListener('touchstart', e=>{
+    if(e.touches.length!==1) { tracking=false; return; }
+    const t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; startT = Date.now();
+    tracking = true;
+  }, { passive:true });
+  document.addEventListener('touchend', e=>{
+    if(!tracking) return; tracking=false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    const dt = Date.now() - startT;
+    // 오른쪽으로 충분히 크게, 가로가 세로보다 확실히 크고, 너무 느리지 않게
+    const farEnough = dx > 80;
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 2;
+    const quickEnough = dt < 800;
+    if(farEnough && horizontal && quickEnough){
+      // 입력 요소를 가로로 드래그한 경우 제외(텍스트 선택 등)
+      const tag = (e.target && e.target.tagName) || '';
+      if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
+      swipeBack();
+    }
+  }, { passive:true });
+})();
+
 (async function init(){
   try{
     await openDB();
@@ -2359,32 +2493,49 @@ renderStep();
     document.head.appendChild(link);
   } catch(e) { /* 매니페스트 생성 불가 시 무시 */ }
 
-  // 2) 서비스워커 등록 → 오프라인에서도 앱이 열리도록 현재 페이지 캐시
+  // 2) 서비스워커 등록 → 오프라인 지원 + 항상 최신본 우선(네트워크 우선)
   //    (file:// 로 직접 열면 동작하지 않음. https 또는 localhost에서 동작)
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     var swCode = [
-      "const CACHE='kimbiseo-v1';",
-      "self.addEventListener('install', e=>{ self.skipWaiting(); e.waitUntil((async()=>{",
-      "  try{ const c=await caches.open(CACHE); await c.addAll([location.href.split('#')[0]]); }catch(_){}",
+      // 버전(kimbiseo-vN)을 올리면 새 워커로 인식되어 즉시 교체됨
+      "const CACHE='kimbiseo-v2';",
+      "self.addEventListener('install', e=>{ self.skipWaiting(); });",
+      "self.addEventListener('activate', e=>{ e.waitUntil((async()=>{",
+      "  const keys = await caches.keys();",
+      "  await Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)));", // 옛 캐시 삭제
+      "  await self.clients.claim();",
       "})()); });",
-      "self.addEventListener('activate', e=>{ e.waitUntil(self.clients.claim()); });",
       "self.addEventListener('fetch', e=>{",
       "  if(e.request.method!=='GET') return;",
       "  e.respondWith((async()=>{",
       "    try{",
-      "      const net = await fetch(e.request);",
+      "      const net = await fetch(e.request, {cache:'no-store'});", // 항상 서버에서 최신 시도
       "      const c = await caches.open(CACHE); c.put(e.request, net.clone()); return net;",
       "    }catch(_){",
       "      const hit = await caches.match(e.request); if(hit) return hit;",
       "      const home = await caches.match(location.origin+location.pathname); if(home) return home;",
-      "      return new Response('오프라인 상태예요.', {headers:{'Content-Type':'text/plain; charset=utf-8'}});",
+      "      return new Response('오프라인 상태예요. 인터넷에 연결되면 자동으로 최신 화면을 불러옵니다.', {headers:{'Content-Type':'text/plain; charset=utf-8'}});",
       "    }",
       "  })());",
       "});"
     ].join("\n");
     try {
       var swUrl = URL.createObjectURL(new Blob([swCode], { type:'text/javascript' }));
-      navigator.serviceWorker.register(swUrl).catch(function(){ /* 등록 실패 무시 */ });
+      navigator.serviceWorker.register(swUrl).then(function(reg){
+        // 새 버전이 감지되면 설치 완료 후 한 번 자동 새로고침
+        reg.addEventListener('updatefound', function(){
+          var nw = reg.installing;
+          if(!nw) return;
+          nw.addEventListener('statechange', function(){
+            if(nw.state==='activated' && navigator.serviceWorker.controller){
+              // 이미 제어 중이던 페이지라면 최신본으로 갱신
+              if(!window.__reloadedForSW){ window.__reloadedForSW=true; location.reload(); }
+            }
+          });
+        });
+        // 페이지 열 때 업데이트 확인
+        reg.update();
+      }).catch(function(){ /* 등록 실패 무시 */ });
     } catch(e) { /* SW 등록 불가 시 무시 */ }
   }
 })();
