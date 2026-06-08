@@ -200,6 +200,20 @@
   .stat .num { font-size: 26px; font-weight: 800; }
   .stat .lab { font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
 
+  /* 운영자 분석 패널 */
+  .analytics { display:grid; grid-template-columns:1fr; gap:14px; margin-bottom:26px; }
+  @media (min-width:760px){ .analytics { grid-template-columns:1fr 1fr; } }
+  .ana-card { background:var(--card); border:1px solid var(--line); border-radius:15px; padding:16px 18px; }
+  .ana-card .ana-title { font-size:13px; font-weight:700; color:var(--text-dim); margin-bottom:14px; }
+  .bar-row { display:flex; align-items:center; gap:10px; margin-bottom:11px; }
+  .bar-row .bl { width:74px; font-size:12.5px; color:var(--text); flex-shrink:0; }
+  .bar-track { flex:1; height:18px; background:var(--bg-soft); border-radius:9px; overflow:hidden; }
+  .bar-fill { height:100%; border-radius:9px; background:linear-gradient(90deg, var(--fairway), var(--fairway-light)); min-width:2px; transition:width 0.4s; }
+  .bar-fill.gold { background:linear-gradient(90deg, var(--gold), #e0c378); }
+  .bar-row .bv { width:62px; text-align:right; font-size:12px; color:var(--text-dim); flex-shrink:0; }
+  .ana-empty { font-size:12.5px; color:var(--text-dim); }
+  .toolbar-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
   .admin-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
   @media (min-width: 760px) { .admin-grid { grid-template-columns: 1.6fr 1fr; } }
 
@@ -468,6 +482,12 @@
   .my-req .mr-cat { font-size:13.5px; font-weight:700; }
   .my-req .mr-detail { font-size:12.5px; color:var(--text-dim); line-height:1.5; }
   .my-req .mr-date { font-size:11px; color:#7c9486; margin-top:6px; }
+  .my-req.is-success { border-color:rgba(76,175,114,0.5); background:rgba(76,175,114,0.07); }
+  .my-req.is-fail { opacity:0.7; }
+  .mr-status-msg { font-size:12px; margin-top:8px; padding:8px 11px; border-radius:9px; line-height:1.5; }
+  .mr-status-msg.wait { background:rgba(201,168,87,0.12); color:#e0c378; }
+  .mr-status-msg.done { background:rgba(76,175,114,0.14); color:var(--fairway-light); }
+  .mr-status-msg.fail { background:rgba(232,85,58,0.1); color:#ff9580; }
   /* 서비스 선택 하단 '내 정보' 섹션 */
   .me-section { margin-top:24px; padding-top:20px; border-top:1px solid var(--line); }
   .me-section .ms-title { font-size:13px; font-weight:700; color:var(--text-dim); margin-bottom:12px; }
@@ -816,14 +836,19 @@
       <h2>운영자 대시보드</h2>
       <p>들어온 부킹 요청을 확인하고, 비서에게 배정한 뒤 직접 전화로 매칭합니다.</p>
     </div>
-    <button class="mini-btn" onclick="resetAll()">🗑 전체 기록 초기화</button>
+    <div class="toolbar-row">
+      <button class="mini-btn" onclick="exportCSV()">⬇️ CSV 내보내기</button>
+      <button class="mini-btn" onclick="resetAll()">🗑 전체 기록 초기화</button>
+    </div>
   </div>
   <div class="stat-row" id="stats"></div>
+  <div class="analytics" id="analytics"></div>
   <div class="search-wrap">
     <span class="s-icon">🔍</span>
     <input id="admin-search" placeholder="손님 이름·전화번호·골프장·담당 비서로 검색" oninput="onAdminSearch()">
     <button class="s-clear" id="search-clear" onclick="clearAdminSearch()">✕</button>
   </div>
+  <div id="admin-extra-filters"></div>
   <div id="search-result"></div>
   <div class="admin-grid" id="admin-main">
     <div class="panel">
@@ -1575,7 +1600,20 @@ function renderMyRequests(){
     const bk = r.booking||{};
     const booked = (r.status==='success' && (bk.course||bk.bdate)) ?
       `<div class="mr-detail" style="color:var(--fairway-light);margin-top:5px">✅ ${escapeHtml(bk.course||'')} ${escapeHtml(bk.bdate||'')} ${escapeHtml(bk.btime||'')} ${bk.fee?Number(bk.fee).toLocaleString()+'원':''}</div>` : '';
-    return `<div class="my-req">
+    // 상태별 손님 안내 메시지
+    let statusMsg='', cardCls='';
+    if(r.status==='received'){
+      statusMsg = `<div class="mr-status-msg wait">⏳ 접수됐어요. 김비서가 확인 후 곧 연락드릴 예정이에요.</div>`;
+    } else if(r.status==='forwarded'){
+      statusMsg = `<div class="mr-status-msg wait">📞 담당 비서가 가능한 부킹을 찾고 있어요. 잠시만 기다려 주세요.</div>`;
+    } else if(r.status==='success'){
+      cardCls=' is-success';
+      statusMsg = `<div class="mr-status-msg done">🎉 부킹이 확정됐어요! 위 내용을 확인해 주세요.</div>`;
+    } else if(r.status==='fail'){
+      cardCls=' is-fail';
+      statusMsg = `<div class="mr-status-msg fail">조건에 맞는 부킹을 잡지 못했어요. 다른 날짜·조건으로 다시 신청해 주세요.</div>`;
+    }
+    return `<div class="my-req${cardCls}">
       <div class="mr-top">
         <span class="mr-cat">${c.emoji} ${c.name}</span>
         <span class="status ${st.c}">${st.t}</span>
@@ -1583,6 +1621,7 @@ function renderMyRequests(){
       <div class="mr-detail">${escapeHtml(detail)}</div>
       ${r.inquiry?`<div class="mr-detail" style="margin-top:5px">${escapeHtml(r.inquiry)}</div>`:''}
       ${booked}
+      ${statusMsg}
       <div class="mr-date">접수 ${fmtTime(r.createdAt)}</div>
     </div>`;
   }).join('') : `<div class="empty">아직 신청한 내역이 없어요.</div>`;
@@ -1926,7 +1965,100 @@ function setAssignMode(m){
 }
 
 let adminFilter = 'all'; // all | received | forwarded | success | fail
+let adminCatFilter = 'all'; // all | golf | overnight | overseas | membership
+let adminDays = 0; // 0=전체, 7, 30
 function setFilter(f){ adminFilter = f; renderAdmin(); }
+function setCatFilter(c){ adminCatFilter = c; renderAdmin(); }
+function setDaysFilter(d){ adminDays = d; renderAdmin(); }
+
+// 카테고리별 요청 분포 + 비서별 성공률 막대그래프
+function renderAnalytics(){
+  const box = document.getElementById('analytics');
+  if(!box) return;
+  if(!requests.length){ box.innerHTML=''; return; }
+  // 카테고리별 건수
+  const catKeys = Object.keys(CATEGORIES);
+  const catCounts = catKeys.map(k=>({ k, n: requests.filter(r=>(r.category||'golf')===k).length }));
+  const catMax = Math.max(1, ...catCounts.map(c=>c.n));
+  const catBars = catCounts.map(c=>`
+    <div class="bar-row">
+      <span class="bl">${CATEGORIES[c.k].emoji} ${CATEGORIES[c.k].name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(c.n/catMax*100)}%"></div></div>
+      <span class="bv">${c.n}건</span>
+    </div>`).join('');
+
+  // 비서별 성공률
+  const secRows = secretaries.map(s=>{
+    const handled = requests.filter(r=>r.assigned===s.name && (r.status==='success'||r.status==='fail')).length;
+    const won = requests.filter(r=>r.assigned===s.name && r.status==='success').length;
+    const rate = handled>0 ? Math.round(won/handled*100) : 0;
+    return { name:s.name, handled, won, rate };
+  });
+  const secBars = secRows.some(s=>s.handled>0)
+    ? secRows.map(s=>`
+      <div class="bar-row">
+        <span class="bl">${escapeHtml(s.name)}</span>
+        <div class="bar-track"><div class="bar-fill gold" style="width:${s.rate}%"></div></div>
+        <span class="bv">${s.rate}% (${s.won}/${s.handled})</span>
+      </div>`).join('')
+    : `<div class="ana-empty">아직 처리된 부킹이 없어요.</div>`;
+
+  box.innerHTML = `
+    <div class="ana-card">
+      <div class="ana-title">📊 카테고리별 요청</div>
+      ${catBars}
+    </div>
+    <div class="ana-card">
+      <div class="ana-title">🏆 비서별 성공률</div>
+      ${secBars}
+    </div>`;
+}
+
+// 카테고리·기간 확장 필터
+function renderExtraFilters(){
+  const box = document.getElementById('admin-extra-filters');
+  if(!box) return;
+  const cats = [['all','전체']].concat(Object.keys(CATEGORIES).map(k=>[k, CATEGORIES[k].emoji+' '+CATEGORIES[k].name]));
+  const catChips = cats.map(([k,t])=>`<button class="filter-chip ${adminCatFilter===k?'on':''}" onclick="setCatFilter('${k}')">${t}</button>`).join('');
+  const days = [[0,'전체 기간'],[7,'최근 7일'],[30,'최근 30일']];
+  const dayChips = days.map(([d,t])=>`<button class="filter-chip ${adminDays===d?'on':''}" onclick="setDaysFilter(${d})">${t}</button>`).join('');
+  box.innerHTML = `
+    <div class="filter-row" style="margin-bottom:8px">${catChips}</div>
+    <div class="filter-row" style="margin-bottom:18px">${dayChips}</div>`;
+}
+
+// 요청 내역 CSV 내보내기
+function exportCSV(){
+  if(!requests.length){ showToast('내보낼 요청이 없어요.'); return; }
+  const headers = ['접수일시','카테고리','상태','이름','연락처','담당비서','상세','골프장','부킹일','부킹시간','그린피','운영자메모'];
+  const catName = c => (CATEGORIES[c]||CATEGORIES.golf).name;
+  const stName = s => (STATUS_LABEL[s]||STATUS_LABEL.received).t;
+  const esc = v => {
+    const s = (v==null?'':String(v)).replace(/"/g,'""');
+    return /[",\n]/.test(s) ? `"${s}"` : s;
+  };
+  const rows = requests.map(r=>{
+    const b = r.booking||{};
+    let detail;
+    if(!r.category || r.category==='golf') detail = [r.date,r.time,r.region,r.origin,r.priority==='vip'?'접대':'가성비'].filter(Boolean).join(' / ');
+    else if(r.category==='membership') detail = `${r.dealType==='sell'?'매도':'매수'} / ${r.memRegion||''} / ${r.inquiry||''}`;
+    else detail = `${r.tourDate||''} / ${r.tourPeople||''} / ${r.memRegion||''} / ${r.inquiry||''}`;
+    return [
+      r.createdAt?new Date(r.createdAt).toLocaleString('ko-KR'):'',
+      catName(r.category), stName(r.status), r.name, r.phone, r.assigned||'',
+      detail, b.course||'', b.bdate||'', b.btime||'', b.fee?Number(b.fee).toLocaleString()+'원':'', r.adminNote||''
+    ].map(esc).join(',');
+  });
+  const csv = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n'); // BOM(엑셀 한글)
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const today = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `골프부킹_요청내역_${today}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showToast('⬇️ CSV 파일을 내려받았어요.');
+}
 
 let adminQuery = '';
 function onAdminSearch(){
@@ -2270,6 +2402,9 @@ function renderAdmin(){
     <div class="stat"><div class="num" style="color:var(--gold)">${memberCount}</div><div class="lab">현재 유료 멤버</div></div>
     <div class="stat"><div class="num">${revenue}<small style="font-size:13px;color:var(--text-dim)">원</small></div><div class="lab">이번 달 멤버십 매출</div></div>`;
 
+  renderAnalytics();
+  renderExtraFilters();
+
   // 필터 칩
   const counts = {
     all: total,
@@ -2282,7 +2417,14 @@ function renderAdmin(){
   ].map(([k,t])=>`<button class="filter-chip ${adminFilter===k?'on':''}" onclick="setFilter('${k}')">${t} ${counts[k]}</button>`).join('');
 
   const rl = document.getElementById('req-list');
-  const list = requests.filter(r=> adminFilter==='all' ? true : r.status===adminFilter);
+  let list = requests.filter(r=> adminFilter==='all' ? true : r.status===adminFilter);
+  // 카테고리 필터
+  if(adminCatFilter!=='all') list = list.filter(r=> (r.category||'golf')===adminCatFilter);
+  // 기간 필터(최근 N일)
+  if(adminDays>0){
+    const since = Date.now() - adminDays*24*60*60*1000;
+    list = list.filter(r=> (r.createdAt||0) >= since);
+  }
 
   let body;
   if(!requests.length){ body = `<div class="empty">아직 요청이 없습니다.<br>'예약 신청' 탭에서 테스트해 보세요.</div>`; }
