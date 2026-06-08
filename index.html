@@ -35,6 +35,7 @@
     --shadow: 0 20px 50px -20px rgba(0,0,0,0.6);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { overflow-x: hidden; overscroll-behavior-y: none; }
   body {
     font-family: 'Pretendard', sans-serif;
     background:
@@ -45,6 +46,9 @@
     min-height: 100vh;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    width: 100%;
+    max-width: 100vw;
+    position: relative;
   }
   .serif { font-family: 'Gowun Batang', serif; }
 
@@ -147,6 +151,7 @@
     flex: 1; padding: 16px; border-radius: 14px; border: none;
     font-family: inherit; font-weight: 700; font-size: 15.5px; cursor: pointer;
     transition: all 0.18s;
+    position: relative; z-index: 1; -webkit-tap-highlight-color: transparent;
   }
   .btn-primary { background: linear-gradient(135deg, var(--fairway-light), var(--fairway)); color: #fff; box-shadow: 0 10px 24px -10px rgba(76,175,114,0.7); }
   .btn-primary:hover { transform: translateY(-2px); }
@@ -547,7 +552,7 @@
   .intro-sub-btn:hover { background:rgba(255,255,255,0.14); color:#fff; }
   .intro-sub-btn.join { color:var(--gold); border-color:rgba(201,168,87,0.45); }
   .intro-sub-btn.join:hover { background:rgba(201,168,87,0.18); }
-  #intro.hide { opacity:0; pointer-events:none; transition: opacity 0.5s; }
+  #intro.hide { opacity:0; pointer-events:none !important; visibility:hidden; transition: opacity 0.5s; }
 
   /* ===== 모바일 가독성: 폰 화면에서 글자 키우기 ===== */
   @media (max-width: 600px) {
@@ -2350,6 +2355,7 @@ function resetAll(){
 function enterApp(){
   const intro = document.getElementById('intro');
   intro.classList.add('hide');
+  intro.style.pointerEvents = 'none';        // 즉시 클릭 통과
   setTimeout(()=>{ intro.style.display='none'; }, 500);
 }
 // 상단 배너 클릭 → 첫 화면(인트로)으로
@@ -2359,6 +2365,7 @@ function showIntro(){
   switchTab('user');
   const intro = document.getElementById('intro');
   intro.style.display = 'flex';
+  intro.style.pointerEvents = '';            // 인트로 다시 활성화
   // 다음 프레임에 hide 해제(트랜지션 위해)
   requestAnimationFrame(()=>{ intro.classList.remove('hide'); });
 }
@@ -2428,10 +2435,11 @@ renderStep();
     const dy = t.clientY - startY;
     const dt = Date.now() - startT;
     // 오른쪽으로 충분히 크게, 가로가 세로보다 확실히 크고, 너무 느리지 않게
-    const farEnough = dx > 80;
-    const horizontal = Math.abs(dx) > Math.abs(dy) * 2;
-    const quickEnough = dt < 800;
-    if(farEnough && horizontal && quickEnough){
+    const farEnough = dx > 90;
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 2.5;
+    const notTooVertical = Math.abs(dy) < 60;
+    const quickEnough = dt < 700;
+    if(farEnough && horizontal && notTooVertical && quickEnough){
       // 입력 요소를 가로로 드래그한 경우 제외(텍스트 선택 등)
       const tag = (e.target && e.target.tagName) || '';
       if(tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT') return;
