@@ -1040,6 +1040,8 @@ function renderStep(){
     if(!state.name) state.name = currentUser.name || '';
     if(!state.phone) state.phone = currentUser.phone || '';
   }
+  // 브라우저 히스토리에 현재 단계 기록 (뒤로가기 버튼 연동)
+  syncHistory();
   renderProgress();
   const host = document.getElementById('step-host');
   const cur = activeSteps()[step];
@@ -1640,9 +1642,17 @@ function payAndSubmit(){
 }
 function next(){ const s=activeSteps(); if(step<s.length-1){ step++; renderStep(); } }
 function prev(){ if(step>0){ step--; renderStep(); } }
-// 스와이프(오른쪽으로 밀기) 시 현재 화면에 맞는 뒤로가기
+// 스와이프/뒤로가기 시 현재 화면에 맞는 뒤로가기
 function swipeBack(){
-  // 손님(예약 신청) 화면에서만 동작
+  // 운영자: 비서 상세 보기가 열려 있으면 대시보드로
+  const sr = document.getElementById('search-result');
+  const am = document.getElementById('admin-main');
+  const adminView = document.getElementById('view-admin');
+  if(adminView && adminView.style.display!=='none' && sr && sr.innerHTML.trim() && am && am.style.display==='none'){
+    closeProDetail();
+    return true;
+  }
+  // 손님(예약 신청) 화면에서만 단계 뒤로가기
   const vu = document.getElementById('view-user');
   if(!vu || vu.style.display==='none') return false;
   const cur = activeSteps()[step];
@@ -1661,6 +1671,42 @@ function swipeBack(){
   return false;
 }
 function resetFlow(){ state={category:null,inquiry:'',dealType:null,memRegion:null,startDate:null,endDate:null,people:null,date:null,region:null,time:null,origin:null,priority:null,name:'',phone:'',plan:null,joinMode:false,freeJoin:false}; step=0; renderStep(); }
+
+// ===== 브라우저 뒤로가기 버튼 연동 =====
+let __histReady = false;     // 첫 진입 시 기준 상태 1개 심기
+let __suppressPush = false;  // popstate 처리 중에는 push 안 함
+let __histDepth = 0;         // 앱 내부에서 쌓은 히스토리 깊이
+function syncHistory(){
+  try{
+    if(__suppressPush) return;            // 뒤로가기로 인한 렌더면 push 생략
+    if(!__histReady){
+      // 페이지 최초: 기준 항목 하나 심기
+      history.replaceState({ app:true, depth:0 }, '');
+      __histReady = true;
+      __histDepth = 0;
+      return;
+    }
+    __histDepth += 1;
+    history.pushState({ app:true, depth: __histDepth }, '');
+  }catch(e){ /* 히스토리 사용 불가 시 무시 */ }
+}
+window.addEventListener('popstate', function(){
+  // 브라우저 뒤로가기 → 앱의 이전 단계로
+  // 손님 신청 화면이면 단계 뒤로, 아니면(운영자/비서/완료 등) 기본 동작
+  __suppressPush = true;
+  let moved = false;
+  try{ moved = swipeBack(); }catch(e){ moved = false; }
+  __suppressPush = false;
+
+  if(moved){
+    // 앱 내부에서 한 단계 뒤로 갔으니, 방금 소비된 히스토리 깊이 보정
+    if(__histDepth > 0) __histDepth -= 1;
+  } else {
+    // 더 뒤로 갈 곳이 없으면(첫 화면 등) 다시 기준 상태를 심어
+    // 사용자가 의도치 않게 사이트를 벗어나지 않도록 방지
+    try{ history.pushState({ app:true, depth:0 }, ''); __histDepth = 0; }catch(e){}
+  }
+});
 
 let lastAssigned = '미배정';
 let unseenCount = 0;
