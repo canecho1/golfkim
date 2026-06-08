@@ -2801,7 +2801,8 @@ function makeSecretary(phone, name){
   secretaries.push({ name:nm, phone:phone||'', realName:realName, count:0, unseen:0, fromMember:true });
   persist();
   showToast(`✅ '${realName}' 님을 '${nm}'(으)로 등록했어요.`);
-  showMembers(); // 목록 갱신(버튼 상태 반영)
+  renderAdmin();   // 비서 리스트 갱신
+  showMembers();   // 회원 목록 갱신(버튼 상태 반영)
 }
 // 회원 목록에서 비서 등록 여부 확인
 function isSecretary(phone, name){
