@@ -270,6 +270,15 @@
   .mode-toggle { display: flex; gap: 6px; background: var(--bg-soft); padding: 4px; border-radius: 10px; margin-bottom: 16px; }
   .mode-toggle button { flex:1; border: none; background: none; color: var(--text-dim); font-family: inherit; font-weight: 600; font-size: 12.5px; padding: 8px; border-radius: 7px; cursor: pointer; }
   .mode-toggle button.on { background: var(--fairway); color: #fff; }
+  /* 순차 자동 배정 상태 박스 */
+  .auto-assign-box { margin-bottom:16px; }
+  .aa-row { display:flex; align-items:center; gap:12px; background:var(--bg-soft); border:1px solid var(--line); border-radius:12px; padding:13px 15px; }
+  .aa-info { flex:1; min-width:0; }
+  .aa-title { font-size:13.5px; font-weight:700; }
+  .aa-sub { font-size:12px; color:var(--text-dim); margin-top:3px; line-height:1.45; }
+  .aa-pool { font-size:11px; color:#7c9486; margin-top:5px; }
+  .aa-btn { flex-shrink:0; border:none; font-family:inherit; font-weight:700; font-size:13px; padding:10px 18px; border-radius:10px; cursor:pointer; background:var(--fairway); color:#fff; }
+  .aa-btn.on { background:rgba(232,85,58,0.85); }
 
   .empty { text-align: center; color: var(--text-dim); padding: 30px 0; font-size: 13.5px; }
 
@@ -866,10 +875,7 @@
     <div class="panel">
       <h3>📩 부킹 요청</h3>
       <div class="ph-sub">신청이 들어오면 여기에 쌓이고, 카톡 알림이 함께 발송됩니다.</div>
-      <div class="mode-toggle">
-        <button class="on" id="m-manual" onclick="setAssignMode('manual')">직접 배정</button>
-        <button id="m-auto" onclick="setAssignMode('auto')">순차 자동 배정</button>
-      </div>
+      <div class="auto-assign-box" id="auto-assign-box"></div>
       <div id="req-list"></div>
     </div>
     <div class="panel">
@@ -928,7 +934,7 @@ function dbSet(key,val){
     t.onsuccess = ()=>res(); t.onerror = ()=>res();
   });
 }
-function persist(){ dbSet('requests', requests); dbSet('secretaries', secretaries); dbSet('rrIndex', rrIndex); dbSet('customerNotes', customerNotes); dbSet('members', members); dbSet('freeMembers', freeMembers); dbSet('currentUser', currentUser); }
+function persist(){ dbSet('requests', requests); dbSet('secretaries', secretaries); dbSet('rrIndex', rrIndex); dbSet('assignMode', assignMode); dbSet('customerNotes', customerNotes); dbSet('members', members); dbSet('freeMembers', freeMembers); dbSet('currentUser', currentUser); }
 
 /* ============ STATE ============ */
 const REGIONS = ['수도권 북부','수도권 남부','인천·영종','강원','충청','경상','전라','제주'];
@@ -1922,13 +1928,34 @@ window.addEventListener('popstate', function(){
 
 let lastAssigned = '미배정';
 let unseenCount = 0;
+// 이 전화번호의 전담 비서(과거에 배정된 비서) 찾기 — 현재 비서 목록에 있는 경우만
+function findDedicatedSec(phone){
+  if(!phone) return null;
+  const pk = phoneKey(phone);
+  // 가장 최근에 배정됐던 비서부터 확인
+  const past = requests.filter(r=>phoneKey(r.phone)===pk && r.assigned);
+  for(const r of past){
+    const s = secretaries.find(x=>x.name===r.assigned);
+    if(s) return s; // 아직 존재하는 비서면 전담으로 인정
+  }
+  return null;
+}
 function submitReq(){
   let assigned = null, forwarded = false;
   const now = Date.now();
-  if(assignMode==='auto' && secretaries.length){
-    const s = secretaries[rrIndex % secretaries.length];
-    s.count++; s.unseen=(s.unseen||0)+1; assigned = s.name; rrIndex++;
-    forwarded = true;
+  // 1) 전담 비서가 있으면 (자동/수동 무관) 그 비서에게 직행
+  const ded = findDedicatedSec(state.phone);
+  if(ded){
+    ded.count++; ded.unseen=(ded.unseen||0)+1; assigned = ded.name; forwarded = true;
+  }
+  // 2) 전담 비서가 없고 순차 자동 배정이 켜져 있으면 신규 손님만 순번 배정
+  else if(assignMode==='auto'){
+    const pool = secretaries.filter(s=>!s.owner); // 운영자 제외
+    if(pool.length){
+      const s = pool[rrIndex % pool.length];
+      s.count++; s.unseen=(s.unseen||0)+1; assigned = s.name; rrIndex++;
+      forwarded = true;
+    }
   }
   requests.unshift({
     id: now,
@@ -1978,8 +2005,33 @@ function showToast(msg){
 /* ============ ADMIN RENDER ============ */
 function setAssignMode(m){
   assignMode = m;
-  document.getElementById('m-manual').classList.toggle('on', m==='manual');
-  document.getElementById('m-auto').classList.toggle('on', m==='auto');
+  persist();
+  renderAutoAssign();
+}
+function toggleAutoAssign(){
+  setAssignMode(assignMode==='auto' ? 'manual' : 'auto');
+  showToast(assignMode==='auto' ? '🔄 순차 자동 배정을 시작했어요.' : '✋ 순차 배정을 중지했어요. 이제 직접 배정합니다.');
+}
+// 순차 배정 상태 박스 렌더
+function renderAutoAssign(){
+  const box = document.getElementById('auto-assign-box');
+  if(!box) return;
+  const pool = secretaries.filter(s=>!s.owner);
+  const on = assignMode==='auto';
+  // 다음 차례 비서
+  const nextName = (on && pool.length) ? pool[rrIndex % pool.length].name : '';
+  const poolNames = pool.map(s=>escapeHtml(s.name)).join(', ') || '없음';
+  box.innerHTML = `
+    <div class="aa-row">
+      <div class="aa-info">
+        <div class="aa-title">${on?'🔄 순차 자동 배정 <b style="color:var(--fairway-light)">켜짐</b>':'✋ 직접 배정 모드'}</div>
+        <div class="aa-sub">${on
+          ? `전담 비서가 있는 단골은 그 비서에게 바로 연결되고, 신규 손님만 ${escapeHtml(nextName||'-')} 님부터 순서대로 배정돼요.`
+          : '신규 손님은 운영자가 직접 배정해요. 단, 전담 비서가 있는 단골은 자동으로 그 비서에게 연결됩니다.'}</div>
+        <div class="aa-pool">순번 대상 비서(운영자 제외): ${poolNames}</div>
+      </div>
+      <button class="aa-btn ${on?'on':''}" onclick="toggleAutoAssign()">${on?'중지':'시작'}</button>
+    </div>`;
 }
 
 let adminFilter = 'all'; // all | received | forwarded | success | fail
@@ -2510,6 +2562,7 @@ function renderAdmin(){
 
   renderAnalytics();
   renderExtraFilters();
+  renderAutoAssign();
 
   // 필터 칩
   const counts = {
@@ -2964,6 +3017,7 @@ renderStep();
     const savedReq = await dbGet('requests');
     const savedSec = await dbGet('secretaries');
     const savedRR  = await dbGet('rrIndex');
+    const savedMode = await dbGet('assignMode');
     const savedNotes = await dbGet('customerNotes');
     const savedMembers = await dbGet('members');
     const savedFree = await dbGet('freeMembers');
@@ -2971,6 +3025,7 @@ renderStep();
     if(Array.isArray(savedReq)) requests = savedReq;
     if(Array.isArray(savedSec) && savedSec.length) secretaries = savedSec;
     if(typeof savedRR === 'number') rrIndex = savedRR;
+    if(savedMode==='auto'||savedMode==='manual') assignMode = savedMode;
     if(savedNotes && typeof savedNotes==='object') customerNotes = savedNotes;
     if(savedMembers && typeof savedMembers==='object') members = savedMembers;
     if(savedFree && typeof savedFree==='object') freeMembers = savedFree;
