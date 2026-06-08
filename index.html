@@ -35,9 +35,6 @@
     --shadow: 0 20px 50px -20px rgba(0,0,0,0.6);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { overflow-x: hidden; overflow-y: auto; }
-  body { overflow-x: hidden; overscroll-behavior-y: none; }
-  body { padding-top: var(--topbar-h, 80px); }
   body {
     font-family: 'Pretendard', sans-serif;
     background:
@@ -49,17 +46,17 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     width: 100%;
-    position: relative;
+    overflow-x: hidden;
   }
   .serif { font-family: 'Gowun Batang', serif; }
 
-  /* ===== Top bar (화면 상단 고정) ===== */
+  /* ===== Top bar (스크롤 시 상단 고정) ===== */
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 24px;
     padding-top: calc(18px + env(safe-area-inset-top));
     border-bottom: 1px solid var(--line);
-    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    position: sticky; top: 0; z-index: 50;
     background: rgba(13,31,23,0.92);
     backdrop-filter: blur(12px);
   }
