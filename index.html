@@ -1089,6 +1089,12 @@ function renderProgress(){
 
 function fmtDate(d){
   if(!d) return '';
+  if(!(d instanceof Date)){
+    const conv = new Date(d);
+    if(isNaN(conv.getTime())) return (typeof d==='string') ? d : '';
+    d = conv;
+  }
+  if(isNaN(d.getTime())) return '';
   const days=['일','월','화','수','목','금','토'];
   return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
 }
