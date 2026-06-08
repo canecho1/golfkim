@@ -221,6 +221,8 @@
   .mem-item .mem-call { flex-shrink:0; }
   .mem-actions { display:flex; flex-direction:column; gap:6px; flex-shrink:0; align-items:stretch; }
   .mem-actions .mini-btn { text-align:center; white-space:nowrap; }
+  .mem-actions .mini-btn.sec-on { background:rgba(76,175,114,0.22); border-color:rgba(76,175,114,0.5); color:var(--fairway-light); }
+  .mem-actions .mini-btn.sec-on:hover { background:rgba(232,85,58,0.18); border-color:rgba(232,85,58,0.5); color:#ff9580; }
   .mem-filter { display:flex; gap:7px; margin-bottom:16px; flex-wrap:wrap; }
 
   .admin-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -2215,9 +2217,12 @@ function showMembers(){
     }
     const nm = u.name || '(이름 미확인)';
     const secRec = secretaries.find(s=> (u.phone && s.phone===u.phone) || s.name===nm);
+    const escNm = escapeHtml(nm).replace(/'/g,"\\'");
     const secBtn = secRec
-      ? `<button class="mini-btn" disabled style="opacity:0.6;cursor:default">✓ ${escapeHtml(secRec.name)}</button>`
-      : `<button class="mini-btn" onclick="makeSecretary('${u.phone}','${escapeHtml(nm).replace(/'/g,"\\'")}')">+ 비서</button>`;
+      ? (secRec.owner
+          ? `<button class="mini-btn" disabled style="opacity:0.6;cursor:default">★ 운영자</button>`
+          : `<button class="mini-btn sec-on" onclick="unmakeSecretary('${u.phone}','${escapeHtml(secRec.name).replace(/'/g,"\\'")}')" title="눌러서 비서 해제">✓ ${escapeHtml(secRec.name)}</button>`)
+      : `<button class="mini-btn" onclick="makeSecretary('${u.phone}','${escNm}')">+ 비서</button>`;
     return `<div class="mem-item">
       <div class="mem-av ${avCls}">${avTxt}</div>
       <div class="mem-info">
@@ -2803,6 +2808,24 @@ function makeSecretary(phone, name){
   showToast(`✅ '${realName}' 님을 '${nm}'(으)로 등록했어요.`);
   renderAdmin();   // 비서 리스트 갱신
   showMembers();   // 회원 목록 갱신(버튼 상태 반영)
+}
+// 회원을 비서에서 해제 (회원 목록에서 호출)
+function unmakeSecretary(phone, name){
+  const idx = secretaries.findIndex(s=> (phone && s.phone===phone) || s.name===name);
+  if(idx<0){ showToast('비서 목록에 없어요.'); return; }
+  const s = secretaries[idx];
+  if(s.owner){ showToast('운영자 본인은 해제할 수 없어요.'); return; }
+  // 진행 중인 배정이 있으면 경고
+  const active = requests.filter(r=>r.assigned===s.name && (r.status==='received'||r.status==='forwarded')).length;
+  const warn = active>0 ? `\n\n진행 중인 요청 ${active}건의 담당이 사라집니다. 운영자가 다시 배정해 주세요.` : '';
+  if(!confirm(`'${s.name}'${s.realName?`(${s.realName})`:''} 비서를 해제하고 일반 회원으로 되돌릴까요?${warn}`)) return;
+  // 배정 해제
+  requests.forEach(r=>{ if(r.assigned===s.name && (r.status==='received'||r.status==='forwarded')){ r.assigned=null; r.forwarded=false; if(r.status==='forwarded') r.status='received'; } });
+  secretaries.splice(idx,1);
+  persist();
+  showToast(`'${s.name}' 비서를 해제했어요.`);
+  renderAdmin();
+  showMembers();
 }
 // 회원 목록에서 비서 등록 여부 확인
 function isSecretary(phone, name){
