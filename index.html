@@ -3190,7 +3190,61 @@ renderStep();
     // 복원된 미확인 배지 반영
     updateProBadge();
   }catch(e){ /* 저장소 사용 불가 시 메모리로만 동작 */ }
+
+  startAutoSync();   // 다른 기기 변경사항을 주기적으로 받아오기
 })();
+
+/* ===== 자동 새로고침(폴링) =====
+   몇 초마다 클라우드에서 데이터를 다시 받아와, 바뀐 게 있을 때만 화면을 갱신 */
+let _lastDataHash = '';
+let _syncTimer = null;
+
+function startAutoSync(){
+  if(_syncTimer) return;
+  _lastDataHash = JSON.stringify([requests, secretaries, customerNotes, members, freeMembers]);
+  _syncTimer = setInterval(autoSyncOnce, 15000);  // 15초마다
+}
+
+async function autoSyncOnce(){
+  // 사용자가 입력/수정 중이면 건너뜀(화면 방해 방지)
+  const a = document.activeElement;
+  if(a && (a.tagName==='INPUT' || a.tagName==='TEXTAREA' || a.tagName==='SELECT')) return;
+  if(typeof editingId !== 'undefined' && editingId) return;  // 카드 편집 중이면 건너뜀
+
+  try{
+    // 클라우드에서만 직접 읽어 비교(로컬 백업은 건드리지 않음)
+    const r  = await cloudGet('requests');
+    const s  = await cloudGet('secretaries');
+    const n  = await cloudGet('customerNotes');
+    const m  = await cloudGet('members');
+    const f  = await cloudGet('freeMembers');
+    if(r===null && s===null) return;  // 클라우드 응답 없음(오프라인 등) → 건너뜀
+
+    const incoming = JSON.stringify([
+      Array.isArray(r)?r:requests,
+      (Array.isArray(s)&&s.length)?s:secretaries,
+      (n&&typeof n==='object')?n:customerNotes,
+      (m&&typeof m==='object')?m:members,
+      (f&&typeof f==='object')?f:freeMembers
+    ]);
+    if(incoming === _lastDataHash) return;  // 바뀐 게 없으면 화면 그대로
+
+    // 바뀐 데이터 반영
+    if(Array.isArray(r)) requests = r;
+    if(Array.isArray(s) && s.length) secretaries = s;
+    if(n && typeof n==='object') customerNotes = n;
+    if(m && typeof m==='object') members = m;
+    if(f && typeof f==='object') freeMembers = f;
+    _lastDataHash = incoming;
+
+    // 현재 보고 있는 화면만 다시 그리기
+    const adminVisible = document.getElementById('view-admin').style.display !== 'none';
+    const proVisible   = document.getElementById('view-pro').style.display !== 'none';
+    if(adminVisible){ renderAdmin(); }
+    if(proVisible){ renderPro(); }
+    updateProBadge();
+  }catch(e){ /* 네트워크 오류 시 조용히 무시, 다음 주기에 재시도 */ }
+}
 </script>
 
 <!-- ===== PWA 등록 (단일 파일 유지: 매니페스트/서비스워커를 코드에서 동적 생성) ===== -->
