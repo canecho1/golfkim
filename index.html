@@ -277,8 +277,9 @@
   .aa-title { font-size:13.5px; font-weight:700; }
   .aa-sub { font-size:12px; color:var(--text-dim); margin-top:3px; line-height:1.45; }
   .aa-pool { font-size:11px; color:#7c9486; margin-top:5px; }
-  .aa-btn { flex-shrink:0; border:none; font-family:inherit; font-weight:700; font-size:13px; padding:10px 18px; border-radius:10px; cursor:pointer; background:var(--fairway); color:#fff; }
-  .aa-btn.on { background:rgba(232,85,58,0.85); }
+  .aa-btn { flex-shrink:0; border:none; font-family:inherit; font-weight:700; font-size:13px; padding:10px 18px; border-radius:10px; cursor:pointer; background:var(--bg-soft); color:var(--text-dim); border:1px solid var(--line); }
+  .aa-btn.on { background:var(--fairway); color:#fff; border-color:var(--fairway); }
+  .aa-mode-switch { flex-shrink:0; display:flex; gap:6px; }
 
   .empty { text-align: center; color: var(--text-dim); padding: 30px 0; font-size: 13.5px; }
 
@@ -2164,8 +2165,8 @@ function setAssignMode(m){
   renderAutoAssign();
 }
 function toggleAutoAssign(){
+  // (구버전 호환용) 현재는 chooseAssignMode를 사용
   setAssignMode(assignMode==='auto' ? 'manual' : 'auto');
-  showToast(assignMode==='auto' ? '🔄 순차 자동 배정을 시작했어요.' : '✋ 순차 배정을 중지했어요. 이제 직접 배정합니다.');
 }
 // 순차 배정 상태 박스 렌더
 function renderAutoAssign(){
@@ -2179,14 +2180,24 @@ function renderAutoAssign(){
   box.innerHTML = `
     <div class="aa-row">
       <div class="aa-info">
-        <div class="aa-title">${on?'🔄 순차 자동 배정 <b style="color:var(--fairway-light)">켜짐</b>':'✋ 직접 배정 모드'}</div>
+        <div class="aa-title">${on?'🔄 순차 자동 배정 모드':'✋ 직접 배정 모드'}</div>
         <div class="aa-sub">${on
           ? `전담 비서가 있는 단골은 그 비서에게 바로 연결되고, 신규 손님만 ${escapeHtml(nextName||'-')} 님부터 순서대로 배정돼요.`
           : '신규 손님은 운영자가 직접 배정해요. 단, 전담 비서가 있는 단골은 자동으로 그 비서에게 연결됩니다.'}</div>
         <div class="aa-pool">순번 대상 비서(운영자 제외): ${poolNames}</div>
       </div>
-      <button class="aa-btn ${on?'on':''}" onclick="toggleAutoAssign()">${on?'중지':'시작'}</button>
+      <div class="aa-mode-switch">
+        <button class="aa-btn ${!on?'on':''}" onclick="chooseAssignMode('manual')">직접</button>
+        <button class="aa-btn ${on?'on':''}" onclick="chooseAssignMode('auto')">순차</button>
+      </div>
     </div>`;
+}
+
+/* 모드 버튼: 이미 그 모드면 아무것도 안 하고, 바뀔 때만 안내 */
+function chooseAssignMode(m){
+  if(assignMode === m) return;       // 이미 그 모드면 무시
+  setAssignMode(m);
+  showToast(m==='auto' ? '🔄 순차 자동 배정으로 바꿨어요.' : '✋ 직접 배정으로 바꿨어요.');
 }
 
 let adminFilter = 'all'; // all | received | forwarded | success | fail
