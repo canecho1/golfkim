@@ -697,6 +697,45 @@
     .tab { font-size: 12px; padding: 9px 2px; }
   }
 </style>
+<!-- ===== Supabase (클라우드 데이터 저장) ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===== Supabase 설정 ===== */
+const SUPA_URL = 'https://dapcyhrughdwtglcmjfn.supabase.co';
+const SUPA_KEY = 'sb_publishable_TmDshYGuGUbv5J4w73fwCg_S8GjI5oe';
+const SUPA_TABLE = 'app_data';   // key(text) / value(jsonb) 두 컬럼
+let _supa = null;
+let CLOUD_OK = false;            // 클라우드 연결 성공 여부
+try {
+  if (window.supabase && SUPA_URL && SUPA_KEY) {
+    _supa = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  }
+} catch(e) { _supa = null; }
+
+/* 클라우드에서 값 읽기: 성공 시 값, 없거나 실패 시 null */
+async function cloudGet(key){
+  if(!_supa) return null;
+  try{
+    const { data, error } = await _supa
+      .from(SUPA_TABLE).select('value').eq('key', key).maybeSingle();
+    if(error){ CLOUD_OK = false; return null; }
+    CLOUD_OK = true;
+    return (data && data.value !== undefined) ? data.value : null;
+  }catch(e){ CLOUD_OK = false; return null; }
+}
+
+/* 클라우드에 값 저장(있으면 갱신, 없으면 추가) */
+async function cloudSet(key, val){
+  if(!_supa) return false;
+  try{
+    const { error } = await _supa
+      .from(SUPA_TABLE).upsert({ key: key, value: val }, { onConflict: 'key' });
+    if(error){ CLOUD_OK = false; return false; }
+    CLOUD_OK = true;
+    return true;
+  }catch(e){ CLOUD_OK = false; return false; }
+}
+</script>
 </head>
 <body>
 
@@ -919,7 +958,8 @@ function openDB(){
     r.onerror = ()=>rej(r.error);
   });
 }
-function dbGet(key){
+/* --- 로컬(IndexedDB) 저장: 오프라인 백업용 --- */
+function _localGet(key){
   return new Promise((res)=>{
     if(!_db) return res(null);
     const t = _db.transaction(STORE,'readonly').objectStore(STORE).get(key);
@@ -927,12 +967,28 @@ function dbGet(key){
     t.onerror = ()=>res(null);
   });
 }
-function dbSet(key,val){
+function _localSet(key,val){
   return new Promise((res)=>{
     if(!_db) return res();
     const t = _db.transaction(STORE,'readwrite').objectStore(STORE).put(val,key);
     t.onsuccess = ()=>res(); t.onerror = ()=>res();
   });
+}
+
+/* --- dbGet: 클라우드 우선, 실패 시 로컬 백업 --- */
+async function dbGet(key){
+  const cv = await cloudGet(key);
+  if(cv !== null){
+    _localSet(key, cv);            // 받아온 값을 로컬에도 백업
+    return cv;
+  }
+  return await _localGet(key);     // 클라우드 불가 시 로컬 사용
+}
+
+/* --- dbSet: 클라우드 + 로컬 양쪽 저장 --- */
+async function dbSet(key,val){
+  await _localSet(key, val);       // 항상 로컬에도 저장(오프라인 대비)
+  await cloudSet(key, val);        // 클라우드에도 저장
 }
 function persist(){ dbSet('requests', requests); dbSet('secretaries', secretaries); dbSet('rrIndex', rrIndex); dbSet('assignMode', assignMode); dbSet('customerNotes', customerNotes); dbSet('members', members); dbSet('freeMembers', freeMembers); dbSet('currentUser', currentUser); }
 
